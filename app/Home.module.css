@@ -1,0 +1,181 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: white;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.navLink {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.navLinkCart {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.navLinkCart:hover {
+  background-color: #388E3C;
+}
+
+.navLinkProfile {
+  background-color: #9C27B0;
+  color: white;
+}
+
+.navLinkProfile:hover {
+  background-color: #7B1FA2;
+}
+
+.navLinkLogin {
+  background-color: #2196F3;
+  color: white;
+}
+
+.navLinkLogin:hover {
+  background-color: #1976D2;
+}
+
+.navLinkRegister {
+  background-color: #FF9800;
+  color: white;
+}
+
+.navLinkRegister:hover {
+  background-color: #F57C00;
+}
+
+.userName {
+  font-weight: 600;
+}
+
+.logoutBtn {
+  padding: 6px 14px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.logoutBtn:hover {
+  background-color: #C62828;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.filterInput {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.filterButton {
+  padding: 8px 16px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.filterButton:hover {
+  background-color: #C62828;
+}
+
+.stats {
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.toyCard {
+  background-color: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.toyCard:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.toyName {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.toyDescription {
+  font-size: 14px;
+  color: #666;
+  flex-grow: 1;
+  margin-bottom: 12px;
+}
+
+.toyInfo {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.toyRating {
+  font-size: 14px;
+  color: #FF9800;
+  margin-top: 8px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
