@@ -37,5 +37,5 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 =======
 # prodavnica-igracaka
-Digitalna prodavnica igračaka - semestralni projekat iz predmeta Klijentske web aplikacije.
+Digitalna prodavnica igračaka - semestralni projekat iz Internet softverske arhitekture.
 >>>>>>> 9ee8197325e7fd6c36d5a7d0af282b0cd171f1b5
