@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 
-
 const TIPOVI = ['Slagalica', 'Slikovnica', 'Figura', 'Vozilo', 'Plišana igračka', 'Društvena igra', 'Konstruktorski set', 'Muzička igračka', 'Edukativna igračka', 'Kreativni set'];
 
 export default function RegisterPage() {
@@ -28,10 +27,12 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+ 
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    // Validacije
     if (formData.password.length < 6) {
       setError('Lozinka mora imati najmanje 6 karaktera!');
       return;
@@ -47,7 +48,8 @@ export default function RegisterPage() {
 
     const favoriteTypesArray = formData.favoriteTypes ? [formData.favoriteTypes] : [];
 
-    const success = register({
+    // 🔥 await na register
+    const success = await register({
       email: formData.email,
       password: formData.password,
       firstName: formData.firstName,
@@ -58,7 +60,8 @@ export default function RegisterPage() {
     });
 
     if (success) {
-      router.push('/');
+      
+      router.push('/login');
     } else {
       setError('Korisnik sa ovim email-om već postoji!');
     }

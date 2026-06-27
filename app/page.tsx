@@ -1,24 +1,67 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // DODATO
+import Image from 'next/image';
 import toys from '../lib/toys.json';
 import { useAuth } from './context/AuthContext';
-import { useCart } from './context/CartContext';
+
+interface Rating {
+  id: number;
+  toyId: number;
+  value: number;
+}
+
+// Globalni keš za ocene na početnoj strani
+let ratingsCache: Rating[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minuta
 
 export default function Home() {
   const { user, logout } = useAuth();
-  const { allRatings } = useCart();
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [loadingRatings, setLoadingRatings] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const fetchedRef = useRef(false);
+
+  // Dohvati ocene sa keširanjem
+  useEffect(() => {
+    const now = Date.now();
+    if (ratingsCache && (now - cacheTimestamp) < CACHE_DURATION) {
+      setRatings(ratingsCache);
+      setLoadingRatings(false);
+      fetchedRef.current = true;
+      return;
+    }
+
+    if (fetchedRef.current) return;
+
+    const fetchRatings = async () => {
+      try {
+        const res = await fetch('/api/ratings');
+        if (res.ok) {
+          const data = await res.json();
+          setRatings(data);
+          ratingsCache = data;
+          cacheTimestamp = Date.now();
+        }
+      } catch (error) {
+        console.error('Greška pri dohvatanju ocena:', error);
+      } finally {
+        setLoadingRatings(false);
+        fetchedRef.current = true;
+      }
+    };
+    fetchRatings();
+  }, []);
 
   const types = [...new Set(toys.map((toy: any) => toy.type?.name).filter(Boolean))];
 
   const getAverageRating = (toyId: number) => {
-    const toyRatings = allRatings.filter(r => r.toyId === toyId);
+    const toyRatings = ratings.filter(r => r.toyId === toyId);
     if (toyRatings.length === 0) return null;
     const sum = toyRatings.reduce((total, r) => total + r.value, 0);
     return (sum / toyRatings.length).toFixed(1);
@@ -96,7 +139,6 @@ export default function Home() {
       <div className="card-grid">
         {filteredToys.map((toy: any) => {
           const avgRating = getAverageRating(toy.toyId);
-          // Ako slika ne postoji, koristi placeholder
           const imageSrc = toy.imageUrl || '/img/placeholder.png';
           
           return (
@@ -108,8 +150,9 @@ export default function Home() {
                   width={200}
                   height={200}
                   className="card-image"
+                  loading="eager"
+                  priority={toy.toyId <= 4}
                   onError={(e) => {
-                    // Ako slika ne postoji, zameni sa placeholderom
                     (e.target as HTMLImageElement).src = '/img/placeholder.png';
                   }}
                 />
@@ -119,7 +162,7 @@ export default function Home() {
               <p className="price">💰 {toy.price} din.</p>
               <p>📌 Tip: {toy.type?.name || 'N/A'}</p>
               <p>🎂 Uzrast: {toy.ageGroup?.name || 'N/A'}</p>
-              <p>⭐ Ocena: {avgRating ? `${avgRating}/5` : 'Nema ocena'}</p>
+              <p>⭐ Ocena: {loadingRatings ? 'Učitavanje...' : (avgRating ? `${avgRating}/5` : 'Nema ocena')}</p>
             </Link>
           );
         })}

@@ -9,16 +9,20 @@ import { useAuth } from '../context/AuthContext';
 export default function CartPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { cart, removeFromCart, updateStatus, updateQuantity, getTotalPrice, clearCart } = useCart();
+  const { cart, loading, removeFromCart, updateQuantity, getTotalPrice, fetchCart } = useCart();
 
   useEffect(() => {
     if (!user) {
       router.push('/login');
+    } else {
+      fetchCart();
     }
   }, [user, router]);
 
-  if (!user) {
-    return null;
+  if (!user) return null;
+
+  if (loading) {
+    return <div className="container text-center">Učitavanje korpe...</div>;
   }
 
   if (cart.length === 0) {
@@ -37,26 +41,21 @@ export default function CartPage() {
 
       <div style={{ marginTop: '20px' }}>
         {cart.map((item) => (
-          <div key={item.toyId} className="cart-item">
+          <div key={item.id} className="cart-item">
             <div className="info">
-              <h3 style={{ margin: '0' }}>{item.name}</h3>
+              <h3 style={{ margin: '0' }}>{item.toy.name}</h3>
               <p style={{ margin: '5px 0' }}>
-                Cena: {item.price} din. × {item.quantity} = {item.price * item.quantity} din.
+                Cena: {item.toy.price} din. × {item.quantity} = {item.toy.price * item.quantity} din.
               </p>
               <p style={{ margin: '5px 0' }}>
                 Status: <strong>{item.status}</strong>
               </p>
-              {item.rating && (
-                <p style={{ margin: '5px 0', color: '#FF9800' }}>
-                  ⭐ Tvoja ocena: {item.rating}/5
-                </p>
-              )}
             </div>
             <div className="actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-              {/* DODATO: Dugmad za promenu količine */}
+              {/* Dugmad za promenu količine */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button 
-                  onClick={() => updateQuantity(item.toyId, item.quantity - 1)}
+                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
                   className="btn btn-secondary"
                   disabled={item.quantity <= 1}
                   style={{ padding: '4px 12px' }}
@@ -65,31 +64,20 @@ export default function CartPage() {
                   {item.quantity}
                 </span>
                 <button 
-                  onClick={() => updateQuantity(item.toyId, item.quantity + 1)}
+                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
                   className="btn btn-secondary"
                   style={{ padding: '4px 12px' }}
                 >+</button>
               </div>
 
-              {/* Postojeća dugmad */}
-              {item.status === 'rezervisano' && (
-                <button
-                  onClick={() => updateStatus(item.toyId, 'pristiglo')}
-                  className="btn btn-secondary"
-                  style={{ width: '100%' }}
-                >
-                  Označi kao pristiglo
-                </button>
-              )}
-              {item.status === 'pristiglo' && (
-                <button
-                  onClick={() => removeFromCart(item.toyId)}
-                  className="btn btn-danger"
-                  style={{ width: '100%' }}
-                >
-                  Obriši
-                </button>
-              )}
+              {/* Dugme za otkazivanje (brisanje) */}
+              <button
+                onClick={() => removeFromCart(item.id)}
+                className="btn btn-danger"
+                style={{ width: '100%' }}
+              >
+                Otkaži porudžbinu
+              </button>
             </div>
           </div>
         ))}
@@ -97,9 +85,6 @@ export default function CartPage() {
 
       <div className="cart-summary">
         <h2>Ukupno: {getTotalPrice()} din.</h2>
-        <button onClick={clearCart} className="btn btn-danger">
-          Isprazni korpu
-        </button>
       </div>
     </div>
   );

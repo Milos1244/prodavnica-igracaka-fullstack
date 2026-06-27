@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  address       String?
+  favoriteTypes String?  // JSON string ili običan tekst
+  role          String   @default("USER") // "USER" ili "ADMIN"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orders        Order[]
+  ratings       Rating[]
+}
+
+model Toy {
+  id          Int      @id @default(autoincrement())
+  name        String
+  permalink   String   @unique
+  description String
+  targetGroup String   // "devojčica", "dečak", "svi"
+  productionDate DateTime
+  price       Float
+  imageUrl    String?
+  ageGroupId  Int?
+  typeId      Int?
+
+  ageGroup    AgeGroup? @relation(fields: [ageGroupId], references: [id])
+  type        ToyType?  @relation(fields: [typeId], references: [id])
+
+  orders      Order[]
+  ratings     Rating[]
+}
+
+model AgeGroup {
+  id          Int      @id @default(autoincrement())
+  name        String   // "0-2", "3-5", "6-9", "10+"
+  description String?
+  toys        Toy[]
+}
+
+model ToyType {
+  id          Int      @id @default(autoincrement())
+  name        String   // "Slagalica", "Slikovnica", "Figura"...
+  description String?
+  toys        Toy[]
+}
+
+model Order {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  toyId      Int
+  quantity   Int      @default(1)
+  status     String   @default("RESERVED") // RESERVED, ARRIVED, CANCELLED
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id])
+  toy        Toy      @relation(fields: [toyId], references: [id])
+
+  @@index([userId])
+  @@index([toyId])
+}
+
+model Rating {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  toyId     Int
+  value     Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  toy       Toy      @relation(fields: [toyId], references: [id])
+
+  @@index([userId])
+  @@index([toyId])
+}

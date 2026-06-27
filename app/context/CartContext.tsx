@@ -1,150 +1,219 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import { useAuth } from './AuthContext';
 
-// Tip za stavku u korpi
 interface CartItem {
-  toyId: number;
-  name: string;
-  price: number;
-  quantity: number;
-  status: 'rezervisano' | 'pristiglo' | 'otkazano';
-  rating?: number;
-}
-
-// Tip za globalnu ocenu
-interface GlobalRating {
   id: number;
   toyId: number;
-  userId: number;
-  value: number;
-  comment?: string;
-  date: Date;
+  quantity: number;
+  status: string;
+  totalPrice: number;
+  toy: {
+    id: number;
+    name: string;
+    price: number;
+    imageUrl: string;
+  };
 }
 
 interface CartContextType {
   cart: CartItem[];
-  allRatings: GlobalRating[];
-  addToCart: (toy: { toyId: number; name: string; price: number }) => void;
-  removeFromCart: (toyId: number) => void;
-  updateStatus: (toyId: number, status: 'rezervisano' | 'pristiglo' | 'otkazano') => void;
-  addRating: (toyId: number, rating: number, comment?: string) => void;
-  updateQuantity: (toyId: number, newQuantity: number) => void; // NOVO
-  clearCart: () => void;
+  loading: boolean;
+  fetchCart: (force?: boolean) => Promise<void>;
+  addToCart: (toyId: number, quantity: number) => Promise<void>;
+  updateStatus: (orderId: number, status: string) => Promise<void>;
+  removeFromCart: (orderId: number) => Promise<void>;
+  addRating: (toyId: number, value: number, comment?: string) => Promise<void>;
   getTotalPrice: () => number;
+  updateQuantity: (orderId: number, newQuantity: number) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { token } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [allRatings, setAllRatings] = useState<GlobalRating[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [lastFetch, setLastFetch] = useState<number>(0);
+  const isFetching = useRef(false); //  Sprečava duple zahteve
 
-  // Dodavanje u korpu 
-  const addToCart = (toy: { toyId: number; name: string; price: number }) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item.toyId === toy.toyId);
-      if (existingItem) {
-        return prevCart.map(item =>
-          item.toyId === toy.toyId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
+  const fetchCart = async (force: boolean = false) => {
+    if (!token) {
+      setCart([]);
+      setLastFetch(0);
+      return;
+    }
+
+    // Sprečava duple zahteve dok je jedan u toku
+    if (isFetching.current) {
+      console.log('⏳ Već se učitava korpa, preskačem...');
+      return;
+    }
+
+    const now = Date.now();
+   
+    if (!force && cart.length > 0 && (now - lastFetch) < 60000) {
+      console.log('⏳ Korpa je već učitana (keš)');
+      return;
+    }
+
+    try {
+      isFetching.current = true;
+      setLoading(true);
+      const response = await fetch('/api/orders', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCart(data);
+        setLastFetch(now);
       } else {
-        return [...prevCart, {
-          toyId: toy.toyId,
-          name: toy.name,
-          price: toy.price,
-          quantity: 1,
-          status: 'rezervisano'
-        }];
+        console.error('Greška pri dohvatanju korpe');
       }
-    });
+    } catch (error) {
+      console.error('fetchCart error:', error);
+    } finally {
+      setLoading(false);
+      isFetching.current = false;
+    }
   };
 
-  // Brisanje iz korpe
-  const removeFromCart = (toyId: number) => {
-    setCart((prevCart) => {
-      const item = prevCart.find(i => i.toyId === toyId);
-      if (item && item.status !== 'pristiglo') {
-        alert('Možete obrisati samo igračke u statusu "pristiglo"!');
-        return prevCart;
+  // Dodaj u korpu (kreira porudžbinu)
+  const addToCart = async (toyId: number, quantity: number = 1) => {
+    if (!token) {
+      alert('Morate biti prijavljeni da biste rezervisali');
+      return;
+    }
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ toyId, quantity }),
+      });
+      if (response.ok) {
+        await fetchCart(true);
+        alert('Uspešno ste rezervisali igračku!');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Greška pri rezervaciji');
       }
-      return prevCart.filter(item => item.toyId !== toyId);
-    });
+    } catch (error) {
+      console.error('addToCart error:', error);
+    }
   };
 
-  // Promena statusa
-  const updateStatus = (toyId: number, status: 'rezervisano' | 'pristiglo' | 'otkazano') => {
-    setCart((prevCart) => {
-      const item = prevCart.find(i => i.toyId === toyId);
-      if (item && item.status !== 'rezervisano' && status !== 'rezervisano') {
-        alert('Možete menjati status samo za igračke u statusu "rezervisano"!');
-        return prevCart;
-      }
-      return prevCart.map(item =>
-        item.toyId === toyId ? { ...item, status } : item
-      );
-    });
+  // Promena statusa (opciono)
+  const updateStatus = async (orderId: number, status: string) => {
+    console.log('updateStatus:', orderId, status);
+    
   };
 
-  //Ažuriranje količine
-  const updateQuantity = (toyId: number, newQuantity: number) => {
-    if (newQuantity < 1) return; // ne dozvoljava 0 ili negativno
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.toyId === toyId ? { ...item, quantity: newQuantity } : item
-      )
-    );
+  // Brisanje iz korpe (otkazivanje)
+  const removeFromCart = async (orderId: number) => {
+    if (!token) return;
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        await fetchCart(true);
+        alert('Porudžbina je otkazana');
+      } else {
+        alert('Greška pri otkazivanju');
+      }
+    } catch (error) {
+      console.error('removeFromCart error:', error);
+    }
   };
 
   // Ocenjivanje
-  const addRating = (toyId: number, value: number, comment?: string) => {
-    const cartItem = cart.find(i => i.toyId === toyId);
-    if (!cartItem) {
-      alert('Igračka nije u korpi!');
+  const addRating = async (toyId: number, value: number, comment?: string) => {
+    if (!token) {
+      alert('Morate biti prijavljeni da biste ocenili');
       return;
     }
-    if (cartItem.status !== 'pristiglo') {
-      alert('Možete oceniti samo igračke u statusu "pristiglo"!');
-      return;
+    try {
+      const response = await fetch('/api/ratings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ toyId, value, comment }),
+      });
+      if (response.ok) {
+        alert('Hvala na oceni!');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Greška pri ocenjivanju');
+      }
+    } catch (error) {
+      console.error('addRating error:', error);
     }
-    const newRating: GlobalRating = {
-      id: Date.now(),
-      toyId,
-      userId: 1,
-      value,
-      comment,
-      date: new Date()
-    };
-    setAllRatings([...allRatings, newRating]);
-    setCart(prevCart =>
-      prevCart.map(item =>
-        item.toyId === toyId ? { ...item, rating: value } : item
-      )
-    );
   };
 
-  const clearCart = () => {
-    setCart([]);
-  };
-
+  // Ukupna cena
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((sum, item) => sum + (item.toy.price * item.quantity), 0);
   };
+
+  // Ažuriranje količine
+  const updateQuantity = async (orderId: number, newQuantity: number) => {
+    if (!token) return;
+    if (newQuantity < 1) {
+      alert('Količina mora biti veća od 0');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ quantity: newQuantity }),
+      });
+      if (response.ok) {
+        await fetchCart(true);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Greška pri ažuriranju količine');
+      }
+    } catch (error) {
+      console.error('updateQuantity error:', error);
+    }
+  };
+
+  // Inicijalno učitavanje – ako token postoji, učitaj korpu 
+  useEffect(() => {
+    if (token) {
+      fetchCart();
+    } else {
+      setCart([]);
+      setLastFetch(0);
+    }
+    
+  }, [token]);
 
   return (
-    <CartContext.Provider value={{
-      cart,
-      allRatings,
-      addToCart,
-      removeFromCart,
-      updateStatus,
-      addRating,
-      updateQuantity, // izloženo
-      clearCart,
-      getTotalPrice
-    }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        loading,
+        fetchCart,
+        addToCart,
+        updateStatus,
+        removeFromCart,
+        updateQuantity,
+        addRating,
+        getTotalPrice,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
@@ -152,8 +221,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart mora biti korišćen unutar CartProvider-a');
-  }
+  if (!context) throw new Error('useCart must be used within CartProvider');
   return context;
 }
